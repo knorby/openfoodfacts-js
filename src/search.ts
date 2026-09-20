@@ -39,6 +39,11 @@ export type AutocompleteQuery =
 
 export type HtmlSearchQuery = paths["/off-test"]["get"]["parameters"]["query"];
 
+/**
+ * Client for the Search-a-licious API (search.openfoodfacts.org).
+ *
+ * The public instance indexes Open Food Facts products only.
+ */
 export class SearchApi {
   private readonly client: ReturnType<typeof createClient<paths>>;
 

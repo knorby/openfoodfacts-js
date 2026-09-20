@@ -96,6 +96,12 @@ export type FlagUpdate = UnwrapContent<
 
 const BASE_URL = "https://prices.openfoodfacts.org";
 
+/**
+ * Client for the Open Prices API.
+ *
+ * Open Prices is an Open Food Facts project, so this service is only relevant
+ * for the OFF flavor.
+ */
 export class PricesApi {
   private readonly client: ReturnType<typeof createClient<paths>>;
 

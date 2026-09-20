@@ -1,10 +1,11 @@
 import { jwtDecode, type JwtPayload } from "jwt-decode";
 
 import {
-  PRODUCT_IMAGE_URL,
   BackendType,
   BACKEND_DOMAINS,
   BACKEND_NAMES,
+  ROBOTOFF_API_URLS,
+  getProductImageBaseUrl,
 } from "./consts.js";
 
 import { Robotoff } from "./robotoff.js";
@@ -95,20 +96,42 @@ import { VERSION } from "./version.js";
 export type { ProductV2 as Product, SearchResultV2 as SearchResult };
 
 export type OpenFoodFactsOptions = {
+  /** Backend flavor to target (OFF, OBF, OPFF or OPF). Defaults to OFF. */
   type?: BackendType;
+  /** Country subdomain, e.g. "fr" for fr.openfoodfacts.org. */
   country?: string;
+  /** UI language used for localized product fields. Defaults to "en". */
   language?: string;
+  /** Custom host override, e.g. a staging environment. */
   host?: string;
 
   accessToken?: string;
   onAccessTokenExpired?: () => string | Promise<string>;
 };
 
-/** Wrapper of OFF API */
+/**
+ * Wrapper of the Open Food Facts API.
+ *
+ * The same API is served by the Open Beauty Facts, Open Pet Food Facts and
+ * Open Products Facts flavors. Pass `type` (or a flavor `host`) to target one
+ * of them; with no options it behaves exactly as before, targeting OFF.
+ *
+ * @example
+ * ```typescript
+ * const beauty = new OpenFoodFacts(fetch, { type: BackendType.OBF });
+ * ```
+ */
 export class OpenFoodFacts {
   private readonly fetch: FetchFn;
   private readonly baseUrl: string;
   private readonly backendType?: BackendType;
+  /**
+   * The backend flavor used for flavor-dependent URLs (taxonomies, images,
+   * Robotoff). Resolved from `type` first, then inferred from `host`, and
+   * finally defaulting to Open Food Facts. Unlike `backendType`, this is never
+   * undefined, so host-only clients no longer silently fall back to OFF.
+   */
+  private readonly effectiveBackend: BackendType;
   private readonly customUserAgent: string;
   private accessToken?: string;
   private readonly defaultOptions: {
@@ -123,16 +146,19 @@ export class OpenFoodFacts {
   /** The V3 ProductOpener API class. Do not use directly unless you know what you're doing. */
   readonly apiv3: ProductOpenerApiV3;
 
-  /** The Robotoff API class. */
+  /** The Robotoff API class. Robotoff is available for every flavor. */
   readonly robotoff: Robotoff;
 
-  /** The NutriPatrol API class. */
+  /** The NutriPatrol API class. NutriPatrol is an OFF-only service. */
   readonly nutriPatrol: NutriPatrol;
 
   /**
-   * Create OFF object
+   * Create an Open X Facts client.
+   *
+   * When neither `type` nor a recognizable flavor `host` is provided, the
+   * client targets Open Food Facts, preserving the previous default behavior.
    * @param fetch - Fetch implementation to use
-   * @param options - Options for the OFF Object
+   * @param options - Options for the client, including the backend `type`
    */
   constructor(
     fetch: FetchFn,
@@ -140,6 +166,7 @@ export class OpenFoodFacts {
   ) {
     this.validateOptions(options);
     this.backendType = options.type;
+    this.effectiveBackend = this.resolveBackend(options);
     this.baseUrl = this.createBaseUrl(options);
     this.customUserAgent = this.createUserAgent();
     this.accessToken = options.accessToken;
@@ -153,8 +180,39 @@ export class OpenFoodFacts {
 
     this.apiv2 = new ProductOpenerApiV2(this.fetch, { host: this.baseUrl });
     this.apiv3 = new ProductOpenerApiV3(this.fetch, { host: this.baseUrl });
-    this.robotoff = new Robotoff(fetch);
+    this.robotoff = new Robotoff(fetch, {
+      baseUrl: ROBOTOFF_API_URLS[this.effectiveBackend],
+    });
     this.nutriPatrol = new NutriPatrol(fetch);
+  }
+
+  /**
+   * Resolves the effective backend flavor for flavor-dependent URLs.
+   * Prefers an explicitly provided `type`; otherwise infers the flavor from a
+   * recognizable `host` domain; otherwise defaults to Open Food Facts.
+   */
+  private resolveBackend(options: OpenFoodFactsOptions): BackendType {
+    if (options.type != null) {
+      return options.type;
+    }
+
+    if (options.host != null) {
+      let hostname: string;
+      try {
+        hostname = new URL(options.host).hostname;
+      } catch {
+        hostname = options.host;
+      }
+
+      for (const type of Object.values(BackendType)) {
+        const domain = BACKEND_DOMAINS[type];
+        if (hostname === domain || hostname.endsWith(`.${domain}`)) {
+          return type;
+        }
+      }
+    }
+
+    return BackendType.OFF;
   }
 
   /**
@@ -468,7 +526,7 @@ export class OpenFoodFacts {
   }
 
   async getTaxo<T extends TaxoNode>(taxo: string): Promise<Taxonomy<T>> {
-    const res = await this.fetch(TAXONOMY_URL(taxo, this.backendType));
+    const res = await this.fetch(TAXONOMY_URL(taxo, this.effectiveBackend));
     return (await res.json()) as Taxonomy<T>;
   }
 
@@ -758,6 +816,7 @@ export default OpenFoodFacts;
  * @param imageName - Name of the image (e.g., "front", "ingredients", "nutrition")
  * @param images - Image metadata from product data
  * @param size - Image size (100, 200, 400, or full) - defaults to 400
+ * @param backend - Backend flavor to fetch the image from - defaults to Open Food Facts
  * @returns Complete URL to the specific image or null if not found
  */
 export function getProductImageUrl(
@@ -765,6 +824,7 @@ export function getProductImageUrl(
   imageName: string,
   images: Record<string, SelectedImage | RawImage>,
   size: "100" | "200" | "400" | "full" = "400",
+  backend: BackendType = BackendType.OFF,
 ): string | null {
   const paddedBarcode = barcode.toString().padStart(13, "0");
   const match = paddedBarcode.match(/^(.{3})(.{3})(.{3})(.*)$/);
@@ -786,5 +846,5 @@ export function getProductImageUrl(
   } else {
     filename = `${imageName}.${size}.jpg`;
   }
-  return PRODUCT_IMAGE_URL(`${path}/${filename}`);
+  return `${getProductImageBaseUrl(backend)}/${path}/${filename}`;
 }

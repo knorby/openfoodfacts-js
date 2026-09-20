@@ -53,6 +53,58 @@ const client = new OpenFoodFacts(fetch);
 
 - See the [SDK auto generated documentation](https://openfoodfacts.github.io/openfoodfacts-js/) for a complete list of available methods and classes.
 
+## Using Open Beauty Facts, Open Pet Food Facts, and Open Products Facts
+
+The SDK targets Open Food Facts by default. You can also target [Open Beauty Facts][obf],
+[Open Pet Food Facts][opff], or [Open Products Facts][opf] with the `type` option. The
+product API, taxonomies, images, and Robotoff requests use the selected service.
+
+```ts
+import {
+  OpenFoodFacts,
+  BackendType,
+} from "@openfoodfacts/openfoodfacts-nodejs";
+
+const beautyClient = new OpenFoodFacts(fetch, { type: BackendType.OBF });
+const { data } = await beautyClient.getProductV2("3600550892126");
+```
+
+If you provide a host from one of these services, the SDK infers its type:
+
+```ts
+const petFoodClient = new OpenFoodFacts(fetch, {
+  host: "https://world.openpetfoodfacts.org",
+});
+```
+
+When you build image URLs without a client instance, pass the service as the final
+argument to `getProductImageUrl`:
+
+```ts
+import {
+  getProductImageUrl,
+  BackendType,
+} from "@openfoodfacts/openfoodfacts-nodejs";
+
+const url = getProductImageUrl(
+  barcode,
+  "front",
+  product.images,
+  "400",
+  BackendType.OBF,
+);
+```
+
+The other API clients in this package do not all support the same services:
+
+- The product API, taxonomies, images, and Robotoff support all four product APIs.
+- NutriPatrol and Open Prices are available for Open Food Facts.
+- `SearchApi` uses the public Open Food Facts search service.
+- `Folksonomy` uses a shared service rather than a service-specific host.
+
+The product schema is shared, but fields and taxonomies vary by service. For example,
+nutrition scores and some attribute groups may be absent outside Open Food Facts.
+
 ## Development
 
 ### Prerequisites
@@ -87,3 +139,6 @@ When submitting a PR, please use the [angular commit guideline](https://github.c
 - Make sure you comply with the OdBL licence, mentioning the Source of your data, and ensuring to avoid combining non free data you can't release legally as open data. Another requirement is contributing back any product you add using this SDK.
 
 [off-api]: https://openfoodfacts.github.io/documentation/docs/Product-Opener/api/
+[obf]: https://world.openbeautyfacts.org/
+[opff]: https://world.openpetfoodfacts.org/
+[opf]: https://world.openproductsfacts.org/
