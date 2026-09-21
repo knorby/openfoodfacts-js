@@ -211,6 +211,33 @@ describe("Platform support tests", () => {
       expect(off.effectiveBackend).toBe(BackendType.OBF);
     });
 
+    it("should normalize a bare host to https and use it for product requests", async () => {
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValue(new Response(JSON.stringify({})));
+      const off = new OpenFoodFacts(fetchMock as unknown as typeof fetch, {
+        host: "world.openbeautyfacts.org",
+      });
+
+      // @ts-ignore - accessing private property for testing
+      expect(off.baseUrl).toBe("https://world.openbeautyfacts.org");
+
+      await off.getProductV3("3600550892126");
+
+      const request = fetchMock.mock.calls[0][0] as Request;
+      expect(request.url).toBe(
+        "https://world.openbeautyfacts.org/api/v3/product/3600550892126",
+      );
+    });
+
+    it("should preserve an already-schemed host", () => {
+      const off = new OpenFoodFacts(dummyFetch, {
+        host: "http://localhost:8000",
+      });
+      // @ts-ignore - accessing private property for testing
+      expect(off.baseUrl).toBe("http://localhost:8000");
+    });
+
     it("should prefer an explicit type over host inference", () => {
       const off = new OpenFoodFacts(dummyFetch, {
         type: BackendType.OPF,

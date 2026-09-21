@@ -213,7 +213,9 @@ export class OpenFoodFacts {
    */
   private createBaseUrl(options: OpenFoodFactsOptions): string {
     if (options.host != null) {
-      return options.host;
+      return options.host.includes("://")
+        ? options.host
+        : `https://${options.host}`;
     }
 
     if (options.type != null) {
