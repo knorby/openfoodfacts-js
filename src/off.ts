@@ -98,11 +98,8 @@ export type { ProductV2 as Product, SearchResultV2 as SearchResult };
 export type OpenFoodFactsOptions = {
   /** Backend flavor to target (OFF, OBF, OPFF or OPF). Defaults to OFF. */
   type?: BackendType;
-  /** Country subdomain, e.g. "fr" for fr.openfoodfacts.org. */
   country?: string;
-  /** UI language used for localized product fields. Defaults to "en". */
   language?: string;
-  /** Custom host override, e.g. a staging environment. */
   host?: string;
 
   accessToken?: string;
@@ -112,25 +109,14 @@ export type OpenFoodFactsOptions = {
 /**
  * Wrapper of the Open Food Facts API.
  *
- * The same API is served by the Open Beauty Facts, Open Pet Food Facts and
- * Open Products Facts flavors. Pass `type` (or a flavor `host`) to target one
- * of them; with no options it behaves exactly as before, targeting OFF.
- *
- * @example
- * ```typescript
- * const beauty = new OpenFoodFacts(fetch, { type: BackendType.OBF });
- * ```
+ * Also targets Open Beauty Facts, Open Pet Food Facts and Open Products Facts
+ * via the `type` option.
  */
 export class OpenFoodFacts {
   private readonly fetch: FetchFn;
   private readonly baseUrl: string;
   private readonly backendType?: BackendType;
-  /**
-   * The backend flavor used for flavor-dependent URLs (taxonomies, images,
-   * Robotoff). Resolved from `type` first, then inferred from `host`, and
-   * finally defaulting to Open Food Facts. Unlike `backendType`, this is never
-   * undefined, so host-only clients no longer silently fall back to OFF.
-   */
+  /** Flavor used for flavor-dependent URLs: `type` if given, else inferred from `host`, else OFF. */
   private readonly effectiveBackend: BackendType;
   private readonly customUserAgent: string;
   private accessToken?: string;
@@ -146,19 +132,16 @@ export class OpenFoodFacts {
   /** The V3 ProductOpener API class. Do not use directly unless you know what you're doing. */
   readonly apiv3: ProductOpenerApiV3;
 
-  /** The Robotoff API class. Robotoff is available for every flavor. */
+  /** The Robotoff API class. */
   readonly robotoff: Robotoff;
 
-  /** The NutriPatrol API class. NutriPatrol is an OFF-only service. */
+  /** The NutriPatrol API class. */
   readonly nutriPatrol: NutriPatrol;
 
   /**
-   * Create an Open X Facts client.
-   *
-   * When neither `type` nor a recognizable flavor `host` is provided, the
-   * client targets Open Food Facts, preserving the previous default behavior.
+   * Create OFF object
    * @param fetch - Fetch implementation to use
-   * @param options - Options for the client, including the backend `type`
+   * @param options - Options for the OFF Object
    */
   constructor(
     fetch: FetchFn,
@@ -186,11 +169,7 @@ export class OpenFoodFacts {
     this.nutriPatrol = new NutriPatrol(fetch);
   }
 
-  /**
-   * Resolves the effective backend flavor for flavor-dependent URLs.
-   * Prefers an explicitly provided `type`; otherwise infers the flavor from a
-   * recognizable `host` domain; otherwise defaults to Open Food Facts.
-   */
+  /** Returns `type` if provided, else infers the flavor from `host`, else OFF. */
   private resolveBackend(options: OpenFoodFactsOptions): BackendType {
     if (options.type != null) {
       return options.type;

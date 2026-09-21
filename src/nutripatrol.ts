@@ -17,12 +17,6 @@ export type StatsResponse = components["schemas"]["StatsResponse"];
 export type IssueType = components["schemas"]["IssueType"];
 export type ReasonType = components["schemas"]["ReasonType"];
 
-/**
- * Client for the NutriPatrol moderation API.
- *
- * NutriPatrol is an Open Food Facts service and is not deployed for the OBF,
- * OPFF or OPF flavors.
- */
 export class NutriPatrol {
   private readonly fetch: FetchFn;
   private readonly baseUrl: string;
