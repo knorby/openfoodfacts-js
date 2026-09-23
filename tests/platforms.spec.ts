@@ -211,6 +211,16 @@ describe("Platform support tests", () => {
       expect(off.effectiveBackend).toBe(BackendType.OBF);
     });
 
+    it("should infer a flavor from a bare host with a port", () => {
+      const off = new OpenFoodFacts(dummyFetch, {
+        host: "world.openbeautyfacts.org:8080",
+      });
+      // @ts-ignore - accessing private property for testing
+      expect(off.effectiveBackend).toBe(BackendType.OBF);
+      // @ts-ignore - accessing private property for testing
+      expect(off.baseUrl).toBe("https://world.openbeautyfacts.org:8080");
+    });
+
     it("should normalize a bare host to https and use it for product requests", async () => {
       const fetchMock = vi
         .fn()

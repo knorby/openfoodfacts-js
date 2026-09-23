@@ -182,7 +182,7 @@ export class OpenFoodFacts {
     if (options.host != null) {
       let hostname: string;
       try {
-        hostname = new URL(options.host).hostname;
+        hostname = new URL(this.createBaseUrl(options)).hostname;
       } catch {
         hostname = options.host;
       }
