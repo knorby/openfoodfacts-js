@@ -195,6 +195,14 @@ describe("Platform support tests", () => {
       expect(off.effectiveBackend).toBe(BackendType.OFF);
     });
 
+    it("should fall back to OFF for an unparseable host", () => {
+      const off = new OpenFoodFacts(dummyFetch, {
+        host: "https://",
+      });
+      // @ts-ignore - accessing private property for testing
+      expect(off.effectiveBackend).toBe(BackendType.OFF);
+    });
+
     it("should not infer a flavor from a lookalike host", () => {
       const off = new OpenFoodFacts(dummyFetch, {
         host: "https://evil-openbeautyfacts.org.attacker.com",
