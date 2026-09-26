@@ -22,6 +22,27 @@ const BACKENDS = [
 describe("Platform support tests", () => {
   const dummyFetch = (() => Promise.resolve(new Response())) as typeof fetch;
 
+  const resolveBackend = (host: string): BackendType => {
+    const client = new OpenFoodFacts(dummyFetch, { host });
+    // @ts-ignore - accessing private property for testing
+    return client.effectiveBackend;
+  };
+
+  const mockFetchJson = () =>
+    vi.fn().mockResolvedValue(new Response(JSON.stringify({})));
+
+  const hostBackendCases: Array<[string, BackendType]> = [
+    ["https://world.openbeautyfacts.org", BackendType.OBF],
+    ["https://world.openproductsfacts.org", BackendType.OPF],
+    ["https://world.openpetfoodfacts.org", BackendType.OPFF],
+    ["https://example.com", BackendType.OFF],
+    ["https://", BackendType.OFF],
+    ["https://evil-openbeautyfacts.org.attacker.com", BackendType.OFF],
+    ["world.openbeautyfacts.org", BackendType.OBF],
+    ["world.openbeautyfacts.org:8080", BackendType.OBF],
+    ["http://localhost:8000", BackendType.OFF],
+  ];
+
   it("should set the correct baseUrl for OFF platform", () => {
     const off = new OpenFoodFacts(dummyFetch, {
       type: BackendType.OFF,
@@ -166,94 +187,19 @@ describe("Platform support tests", () => {
   });
 
   describe("Effective backend resolution", () => {
-    it("should infer the backend from a flavor host", () => {
-      const off = new OpenFoodFacts(dummyFetch, {
-        host: "https://world.openbeautyfacts.org",
-      });
-      // @ts-ignore - accessing private property for testing
-      expect(off.effectiveBackend).toBe(BackendType.OBF);
-    });
+    it.each(hostBackendCases)(
+      "should resolve host %s to %s",
+      (host, expected) => {
+        expect(resolveBackend(host)).toBe(expected);
+      },
+    );
 
-    it("should infer OPF and OPFF from their hosts", () => {
-      const opf = new OpenFoodFacts(dummyFetch, {
-        host: "https://world.openproductsfacts.org",
-      });
-      const opff = new OpenFoodFacts(dummyFetch, {
-        host: "https://world.openpetfoodfacts.org",
-      });
-      // @ts-ignore - accessing private property for testing
-      expect(opf.effectiveBackend).toBe(BackendType.OPF);
-      // @ts-ignore - accessing private property for testing
-      expect(opff.effectiveBackend).toBe(BackendType.OPFF);
-    });
-
-    it("should fall back to OFF for an unrecognized host", () => {
-      const off = new OpenFoodFacts(dummyFetch, {
-        host: "https://example.com",
-      });
-      // @ts-ignore - accessing private property for testing
-      expect(off.effectiveBackend).toBe(BackendType.OFF);
-    });
-
-    it("should fall back to OFF for an unparseable host", () => {
-      const off = new OpenFoodFacts(dummyFetch, {
-        host: "https://",
-      });
-      // @ts-ignore - accessing private property for testing
-      expect(off.effectiveBackend).toBe(BackendType.OFF);
-    });
-
-    it("should not infer a flavor from a lookalike host", () => {
-      const off = new OpenFoodFacts(dummyFetch, {
-        host: "https://evil-openbeautyfacts.org.attacker.com",
-      });
-      // @ts-ignore - accessing private property for testing
-      expect(off.effectiveBackend).toBe(BackendType.OFF);
-    });
-
-    it("should infer a flavor from a bare host without protocol", () => {
+    it("should normalize a bare host to https", () => {
       const off = new OpenFoodFacts(dummyFetch, {
         host: "world.openbeautyfacts.org",
       });
-      // @ts-ignore - accessing private property for testing
-      expect(off.effectiveBackend).toBe(BackendType.OBF);
-    });
-
-    it("should infer a flavor from a bare host with a port", () => {
-      const off = new OpenFoodFacts(dummyFetch, {
-        host: "world.openbeautyfacts.org:8080",
-      });
-      // @ts-ignore - accessing private property for testing
-      expect(off.effectiveBackend).toBe(BackendType.OBF);
-      // @ts-ignore - accessing private property for testing
-      expect(off.baseUrl).toBe("https://world.openbeautyfacts.org:8080");
-    });
-
-    it("should normalize a bare host to https and use it for product requests", async () => {
-      const fetchMock = vi
-        .fn()
-        .mockResolvedValue(new Response(JSON.stringify({})));
-      const off = new OpenFoodFacts(fetchMock as unknown as typeof fetch, {
-        host: "world.openbeautyfacts.org",
-      });
-
       // @ts-ignore - accessing private property for testing
       expect(off.baseUrl).toBe("https://world.openbeautyfacts.org");
-
-      await off.getProductV3("3600550892126");
-
-      const request = fetchMock.mock.calls[0][0] as Request;
-      expect(request.url).toBe(
-        "https://world.openbeautyfacts.org/api/v3/product/3600550892126",
-      );
-    });
-
-    it("should preserve an already-schemed host", () => {
-      const off = new OpenFoodFacts(dummyFetch, {
-        host: "http://localhost:8000",
-      });
-      // @ts-ignore - accessing private property for testing
-      expect(off.baseUrl).toBe("http://localhost:8000");
     });
 
     it("should prefer an explicit type over host inference", () => {
@@ -265,10 +211,22 @@ describe("Platform support tests", () => {
       expect(off.effectiveBackend).toBe(BackendType.OPF);
     });
 
+    it("should use the inferred backend for product requests", async () => {
+      const fetchMock = mockFetchJson();
+      const off = new OpenFoodFacts(fetchMock as unknown as typeof fetch, {
+        host: "world.openbeautyfacts.org",
+      });
+
+      await off.getProductV3("3600550892126");
+
+      const request = fetchMock.mock.calls[0][0] as Request;
+      expect(request.url).toBe(
+        "https://world.openbeautyfacts.org/api/v3/product/3600550892126",
+      );
+    });
+
     it("should use the inferred backend for taxonomy requests", async () => {
-      const fetchMock = vi
-        .fn()
-        .mockResolvedValue(new Response(JSON.stringify({})));
+      const fetchMock = mockFetchJson();
       const off = new OpenFoodFacts(fetchMock as unknown as typeof fetch, {
         host: "https://world.openbeautyfacts.org",
       });
