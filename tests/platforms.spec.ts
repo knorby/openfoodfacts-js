@@ -35,12 +35,12 @@ describe("Platform support tests", () => {
     ["https://world.openbeautyfacts.org", BackendType.OBF],
     ["https://world.openproductsfacts.org", BackendType.OPF],
     ["https://world.openpetfoodfacts.org", BackendType.OPFF],
-    ["https://example.com", BackendType.OFF],
-    ["https://", BackendType.OFF],
-    ["https://evil-openbeautyfacts.org.attacker.com", BackendType.OFF],
-    ["world.openbeautyfacts.org", BackendType.OBF],
-    ["world.openbeautyfacts.org:8080", BackendType.OBF],
-    ["http://localhost:8000", BackendType.OFF],
+    ["https://example.org", BackendType.OFF], // unrecognized host
+    ["https://", BackendType.OFF], // unparseable host
+    ["https://evil-openbeautyfacts.org.attacker.com", BackendType.OFF], // lookalike host
+    ["world.openbeautyfacts.org", BackendType.OBF], // bare host
+    ["world.openbeautyfacts.org:8080", BackendType.OBF], // bare host with port
+    ["http://localhost:8000", BackendType.OFF], // already-schemed host
   ];
 
   it("should set the correct baseUrl for OFF platform", () => {
