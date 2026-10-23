@@ -4,7 +4,6 @@ import {
   BackendType,
   BACKEND_DOMAINS,
   BACKEND_NAMES,
-  ROBOTOFF_API_URLS,
   getProductImageBaseUrl,
   PRODUCT_IMAGE_BASE_URL,
   PRODUCT_API_HOST,
@@ -131,21 +130,13 @@ describe("Platform support tests", () => {
       }
     });
 
-    it("should expose a Robotoff URL for every backend", () => {
-      for (const backend of BACKENDS) {
-        expect(ROBOTOFF_API_URLS[backend]).toBe(
-          `https://robotoff.${BACKEND_DOMAINS[backend]}`,
-        );
-      }
-    });
-
     it("should keep the legacy OFF constants backward compatible", () => {
       expect(PRODUCT_API_HOST).toBe("https://world.openfoodfacts.org");
       expect(PRODUCT_IMAGE_BASE_URL).toBe(
         getProductImageBaseUrl(BackendType.OFF),
       );
       expect(DEFAULT_ROBOTOFF_API_URL).toBe(
-        `${ROBOTOFF_API_URLS[BackendType.OFF]}/api/v1`,
+        "https://robotoff.openfoodfacts.org/api/v1",
       );
     });
 
@@ -241,14 +232,40 @@ describe("Platform support tests", () => {
       );
     });
 
-    it("should point Robotoff at the matching flavor domain", () => {
+    it("should use the single Robotoff deployment for every backend", () => {
       for (const backend of BACKENDS) {
         const off = new OpenFoodFacts(dummyFetch, { type: backend });
         // @ts-ignore - accessing private property for testing
-        expect(off.robotoff.baseUrl).toBe(
-          `${ROBOTOFF_API_URLS[backend]}/api/v1`,
-        );
+        expect(off.robotoff.baseUrl).toBe(DEFAULT_ROBOTOFF_API_URL);
       }
+    });
+
+    it("should pass the backend to Robotoff as server_type", async () => {
+      for (const backend of BACKENDS) {
+        const fetchMock = mockFetchJson();
+        const off = new OpenFoodFacts(fetchMock as unknown as typeof fetch, {
+          type: backend,
+        });
+
+        await off.robotoff.insights({});
+
+        const request = fetchMock.mock.calls[0][0] as Request;
+        const url = new URL(request.url);
+        expect(url.origin).toBe("https://robotoff.openfoodfacts.org");
+        expect(url.searchParams.get("server_type")).toBe(backend.toLowerCase());
+      }
+    });
+
+    it("should pass server_type when a Robotoff call has no query", async () => {
+      const fetchMock = mockFetchJson();
+      const off = new OpenFoodFacts(fetchMock as unknown as typeof fetch, {
+        type: BackendType.OBF,
+      });
+
+      await off.robotoff.questionsByProductCode(123);
+
+      const request = fetchMock.mock.calls[0][0] as Request;
+      expect(new URL(request.url).searchParams.get("server_type")).toBe("obf");
     });
   });
 });

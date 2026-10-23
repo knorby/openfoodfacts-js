@@ -39,14 +39,6 @@ export const DEFAULT_ROBOTOFF_API_URL =
 export const DEFAULT_NUTRIPATROL_API_URL =
   "https://nutripatrol.openfoodfacts.org";
 
-/** Robotoff is deployed for every flavor; the `/api/v1` path is appended by the client. */
-export const ROBOTOFF_API_URLS = {
-  [BackendType.OFF]: `https://robotoff.${BACKEND_DOMAINS[BackendType.OFF]}`,
-  [BackendType.OBF]: `https://robotoff.${BACKEND_DOMAINS[BackendType.OBF]}`,
-  [BackendType.OPFF]: `https://robotoff.${BACKEND_DOMAINS[BackendType.OPFF]}`,
-  [BackendType.OPF]: `https://robotoff.${BACKEND_DOMAINS[BackendType.OPF]}`,
-};
-
 export const PRODUCT_IMAGE_BASE_URL =
   "https://images.openfoodfacts.org/images/products";
 

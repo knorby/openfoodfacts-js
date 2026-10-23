@@ -4,11 +4,10 @@ import {
   BackendType,
   BACKEND_DOMAINS,
   BACKEND_NAMES,
-  ROBOTOFF_API_URLS,
   getProductImageBaseUrl,
 } from "./consts.js";
 
-import { Robotoff } from "./robotoff.js";
+import { Robotoff, type RobotoffServerType } from "./robotoff.js";
 import { NutriPatrol } from "./nutripatrol.js";
 
 import { TAXONOMY_URL } from "./taxonomy/api.js";
@@ -99,6 +98,14 @@ import { VERSION } from "./version.js";
 // By default, use v2
 export type { ProductV2 as Product, SearchResultV2 as SearchResult };
 
+/** Robotoff is a single deployment that selects the project per request. */
+const ROBOTOFF_SERVER_TYPES: Record<BackendType, RobotoffServerType> = {
+  [BackendType.OFF]: "off",
+  [BackendType.OBF]: "obf",
+  [BackendType.OPFF]: "opff",
+  [BackendType.OPF]: "opf",
+};
+
 export type OpenFoodFactsOptions = {
   /** Backend flavor to target (OFF, OBF, OPFF or OPF). Defaults to OFF. */
   type?: BackendType;
@@ -168,7 +175,7 @@ export class OpenFoodFacts {
     this.apiv2 = new ProductOpenerApiV2(this.fetch, { host: this.baseUrl });
     this.apiv3 = new ProductOpenerApiV3(this.fetch, { host: this.baseUrl });
     this.robotoff = new Robotoff(fetch, {
-      baseUrl: ROBOTOFF_API_URLS[this.effectiveBackend],
+      serverType: ROBOTOFF_SERVER_TYPES[this.effectiveBackend],
     });
     this.nutriPatrol = new NutriPatrol(fetch);
   }
