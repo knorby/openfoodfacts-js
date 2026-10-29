@@ -9,6 +9,7 @@ import {
 
 import { Robotoff, type RobotoffServerType } from "./robotoff.js";
 import { NutriPatrol } from "./nutripatrol.js";
+import { QueryApi } from "./query.js";
 
 import { TAXONOMY_URL } from "./taxonomy/api.js";
 import type {
@@ -112,6 +113,7 @@ export type OpenFoodFactsOptions = {
   country?: string;
   language?: string;
   host?: string;
+  queryHost?: string;
 
   accessToken?: string;
   onAccessTokenExpired?: () => string | Promise<string>;
@@ -148,6 +150,8 @@ export class OpenFoodFacts {
 
   /** The NutriPatrol API class. */
   readonly nutriPatrol: NutriPatrol;
+  /** The Open Food Facts query API, useful for custom facet aggregations. */
+  readonly query: QueryApi;
 
   /**
    * Create OFF object
@@ -178,6 +182,8 @@ export class OpenFoodFacts {
       serverType: ROBOTOFF_SERVER_TYPES[this.effectiveBackend],
     });
     this.nutriPatrol = new NutriPatrol(fetch);
+    // The query service is a separate host and does not use the product API token wrapper.
+    this.query = new QueryApi(fetch, { baseUrl: options.queryHost });
   }
 
   /** Returns `type` if provided, else infers the flavor from `host`, else OFF. */

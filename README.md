@@ -53,6 +53,7 @@ const client = new OpenFoodFacts(fetch);
 
 - See the [SDK auto generated documentation](https://openfoodfacts.github.io/openfoodfacts-js/) for a complete list of available methods and classes.
 
+
 ### Other projects
 
 The client also works with [Open Beauty Facts][obf], [Open Pet Food Facts][opff] and [Open Products Facts][opf]:
@@ -67,6 +68,23 @@ const client = new OpenFoodFacts(fetch, { type: BackendType.OBF });
 ```
 
 Passing a project `host` has the same effect. Some interfaces, such as NutriPatrol and Open Prices, only support OFF.
+
+
+### Facet aggregations
+
+Use the query service to get facet values and their product counts, optionally filtered by other supported product fields:
+
+```ts
+const brands = await client.query.getFacetValues("brands_tags", {
+  filter: { countries_tags: "en:france" },
+  limit: 20,
+});
+
+const distinctBrandCount = await client.query.countFacetValues("brands_tags", {
+  filter: { countries_tags: "en:france" },
+});
+```
+
 
 ## Development
 
